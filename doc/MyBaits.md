@@ -403,7 +403,7 @@ User getUserById(@Param("id") Integer id);
 List<User> getAllUser();
 ```
 
-### 3、查询Java数据类型对象
+### 3、查询一条数据
 
 MyBatis中自带对基本数据类型和集合类型的别名
 
@@ -417,18 +417,43 @@ MyBatis中自带对基本数据类型和集合类型的别名
 Integer getCount();
 ```
 
+### 4、查询一条数据为map集合
+
 ```java
 // 根据id查找用户，并将每一个字段名设为map的key
 Map<String, Object> getUserByIdToMap(@Param("id") Integer id);
 ```
+
+### 5、查询多条数据为map集合
+
+方法一
 
 ```java
 // 查询所有用户，并将每个用户赋给map
 List<Map<String, Object>> getAllUserToMap();
 ```
 
+方法二
+
 ```java
 // 查询所有用户，并按照id为键，其他属性为map的方式存放
 @MapKey("id")
 Map<String, Object> getAllUserToMapKey();
 ```
+
+## 五、特殊SQL执行
+
+### 1、模糊查询
+
+SQL中like后的匹配字符需要加`'%%'`，#{}占位符解析时会被当做字符串，导致无法设置字段名，可以使用以下几种方式
+
+```xml
+<select id="getUserByLike" resultType="cn.lyxlz.mybatis.pojo.User">
+    <!--select * from t_user where username like '%${username}%'-->
+    <!--select * from t_user where username like concat('%', #{username}, '%')-->
+    select * from t_user where username like "%"#{username}"%"
+</select>
+```
+
+### 2、批量删除
+
