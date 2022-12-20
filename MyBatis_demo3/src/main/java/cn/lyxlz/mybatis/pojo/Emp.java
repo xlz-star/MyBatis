@@ -13,13 +13,12 @@ public class Emp {
     private Integer age;
     private char sex;
     private String email;
-    private Integer did;
+    private Dept dept;
 
-    public Emp(String empName, Integer age, char sex, String email, Integer did) {
+    public Emp(String empName, Integer age, char sex, String email) {
         this.empName = empName;
         this.age = age;
         this.sex = sex;
         this.email = email;
-        this.did = did;
     }
 }

@@ -25,7 +25,19 @@ public class ResultMapTest {
     @Test
     public void testGetAllEmp() {
         List<Emp> allEmp = mapper.getAllEmp();
-        System.out.println(allEmp);
+        allEmp.forEach(System.out::println);
+    }
+
+    @Test
+    public void testGetEmpAndDept() {
+        List<Emp> empAndDept = mapper.getEmpAndDept();
+        empAndDept.forEach(System.out::println);
+    }
+
+    @Test
+    public void testGetEmpAndDeptByStep() {
+        Emp emp = mapper.getEmpAndDeptByStepOne(3);
+        System.out.println(emp);
     }
 
     @After

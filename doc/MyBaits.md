@@ -447,6 +447,10 @@ Map<String, Object> getAllUserToMapKey();
 
 SQL中like后的匹配字符需要加`'%%'`，#{}占位符解析时会被当做字符串，导致无法设置字段名，可以使用以下几种方式
 
+```java
+List<User> getUserByLike(@Param("username") String username);
+```
+
 ```xml
 <select id="getUserByLike" resultType="cn.lyxlz.mybatis.pojo.User">
     <!--select * from t_user where username like '%${username}%'-->
@@ -457,3 +461,226 @@ SQL中like后的匹配字符需要加`'%%'`，#{}占位符解析时会被当做�
 
 ### 2、批量删除
 
+由于`#{}`会自动为字段添加单引号，所以在删除操作中，只能使用`${}`
+
+```java
+int deleteMore(@Param("ids") String ids);
+```
+
+```xml
+<delete id="deleteMore">
+    delete from t_user where id in (${ids})
+</delete>
+```
+
+### 3、动态设置表名
+
+只能使用`${}`理由同上
+
+```java
+List<User> getUserByTable(@Param("tablename") String tablename);
+```
+
+```xml
+<select id="getUserByTable" resultType="cn.lyxlz.mybatis.pojo.User">
+    select * from ${tablename}
+</select>
+```
+
+### 4、获取添加自增功能的主键
+
+```java
+void insertUser(User user);
+```
+
+```xml
+<!--
+    userGenerateKeys：设置当前标签中sql使用了的自增标签
+    keyProperty：将自增主键作为属性返回
+-->
+<insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+    insert into t_user values (null, #{username}, #{password}, #{age}, #{sex}, #{email})
+</insert>
+```
+
+## 六、字段名和属性名不一致问题
+
+开发中实体类（驼峰）与mysql字段名（下划线）的命名规则不一样，MyBatis处理映射时无法正确获取数据，可以使用以下几种方式解决
+
+### 1、字段别名
+
+```xml
+<select id="getAllEmp" resultType="cn.lyxlz.mybatis.pojo.Emp">
+    select eid, emp_name as empName, age, sex, email, did from t_emp;
+</select>
+```
+
+### 2、MyBatis全局配置
+
+**mybatis-config.xml**
+
+```xml
+<!--设置MyBatis的全局配置-->
+<settings>
+    <!--设置下划线转驼峰-->
+    <setting name="mapUnderscoreToCamelCase" value="true"/>
+</settings>
+```
+
+### 3、resultMap
+
+**EmpMapper.xml**
+
+```xml
+<resultMap id="empResultMap" type="Emp">
+    <!--设置主键-->
+    <id property="eid" column="eid"/>
+    <!--设置其他字段-->
+    <result property="empName" column="emp_name" />
+    <result property="age" column="age" />
+    <result property="sex" column="sex" />
+    <result property="email" column="email" />
+</resultMap>
+
+<select id="getAllEmp" resultMap="empResultMap">
+    select * from t_emp
+</select>
+```
+
+## 七、复杂映射关系
+
+### 1、多对一
+
+#### 通过级联属性赋值
+
+在`“一”`中设置对应实体类的`对象`，在`“多”`中设置对应实体类对象的`集合`
+
+```java
+public class Emp {
+    private Integer eid;
+    private String empName;
+    private Integer age;
+    private char sex;
+    private String email;
+    private Dept dept;
+}
+```
+
+```java
+public class Dept {
+    private Integer did;
+    private String deptName;
+    private List<Emp> emp;
+}
+```
+
+在xml映射文件中，需要使用resultMap设置字段对应，对于对象字段的属性需要用`".字段"`设置
+
+```xml
+<resultMap id="empAndDeptResultMap" type="Emp">
+    <!--设置主键-->
+    <id property="eid" column="eid"/>
+    <!--设置其他字段-->
+    <result property="empName" column="emp_name" />
+    <result property="age" column="age" />
+    <result property="sex" column="sex" />
+    <result property="email" column="email" />
+    <result property="dept.did" column="did" />
+    <result property="dept.deptName" column="dept_name" />
+</resultMap>
+
+<select id="getEmpAndDept" resultMap="empAndDeptResultMap">
+    SELECT
+        e.eid,
+        e.emp_name,
+        e.age,
+        e.sex,
+        e.email,
+        e.did,
+        d.dept_name
+    FROM
+        t_emp e
+    JOIN t_dept d ON e.did = d.did
+</select>
+```
+
+#### 使用association标签
+
+**EmpMapper**
+
+```xml
+<resultMap id="empAndDeptResultMapTwo" type="Emp">
+    <!--设置主键-->
+    <id property="eid" column="eid"/>
+    <!--设置其他字段-->
+    <result property="empName" column="emp_name" />
+    <result property="age" column="age" />
+    <result property="sex" column="sex" />
+    <result property="email" column="email" />
+    <!--
+        association:
+           property: 映射字段
+           javaType: 映射的实体类
+    -->
+    <association property="dept" javaType="Dept">
+        <!--主键-->
+        <id property="did" column="did" />
+        <!--其他字段-->
+        <result property="deptName" column="dept_name" />
+    </association>
+</resultMap>
+```
+
+#### 分步骤查询
+
+首先查询员工表中的数据
+
+```java
+Emp getEmpAndDeptByStepOne(@Param("eid") Integer eid);
+```
+
+```xml
+<resultMap id="empAndDeptByStepResultMap" type="Emp">
+    <id property="eid" column="eid"/>
+    <result property="empName" column="emp_name" />
+    <result property="age" column="age" />
+    <result property="sex" column="sex" />
+    <result property="email" column="email" />
+    <!--
+		 property: 对应的实体类属性
+		 select  : 下一步查询方法
+		 column  : 对应的字段（类似于join on中的on）
+	-->
+    <association 
+                 property="dept"
+                 select="cn.lyxlz.mybatis.mapper.DeptMapper.getEmpAndDeptByStepTwo"
+    			 column="did" />
+    
+</resultMap>
+
+<select id="getEmpAndDeptByStepOne" resultMap="empAndDeptByStepResultMap">
+    select * from t_emp where eid = #{eid}
+</select>
+```
+
+再查询对应部门表中的数据
+
+```java
+Dept getEmpAndDeptByStepTwo(@Param("did") Integer did);
+```
+
+```xml
+<select id="getEmpAndDeptByStepTwo" resultType="cn.lyxlz.mybatis.pojo.Dept">
+    select * from t_dept where did = #{did}
+</select>
+```
+
+测试时调用第一步即可
+
+```java
+@Test
+public void testGetEmpAndDeptByStep() {
+    Emp emp = mapper.getEmpAndDeptByStepOne(3);
+    System.out.println(emp);
+}
+```

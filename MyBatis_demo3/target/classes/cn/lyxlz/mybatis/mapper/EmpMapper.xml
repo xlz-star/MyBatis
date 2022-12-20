@@ -54,7 +54,9 @@
         <result property="email" column="email" />
         <association property="dept"
                         select="cn.lyxlz.mybatis.mapper.DeptMapper.getEmpAndDeptByStepTwo"
-                        column="did" />
+                        column="did">
+
+        </association>
     </resultMap>
     
     <select id="getAllEmp" resultMap="empResultMap">
