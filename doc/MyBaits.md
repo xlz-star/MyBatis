@@ -1001,3 +1001,84 @@ select <include refid="empCol" /> from t_emp
 如果一级缓存没有，则查询数据库
 
 SqlSession关闭后，一级缓存中的数据会写入二级缓存
+
+### 5、整合第三方缓存EHCache
+
+#### 添加依赖
+
+```xml
+<dependency>
+    <groupId>org.mybatis.caches</groupId>
+    <artifactId>mybatis-ehcache</artifactId>
+    <version>1.2.3</version>
+</dependency>
+
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.4.5</version>
+</dependency>
+```
+
+#### 创建EHCache配置文件
+
+ehcache.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd">
+
+  <!-- 磁盘缓存位置 -->
+  <diskStore path="java.io.tmpdir/ehcache"/>
+
+  <!-- 默认缓存 -->
+  <defaultCache
+          maxEntriesLocalHeap="10000"
+          eternal="false"
+          timeToIdleSeconds="120"
+          timeToLiveSeconds="120"
+          maxEntriesLocalDisk="10000000"
+          diskExpiryThreadIntervalSeconds="120"
+          memoryStoreEvictionPolicy="LRU">
+    <persistence strategy="localTempSwap"/>
+  </defaultCache>
+
+  <!-- helloworld缓存 -->
+  <cache name="HelloWorldCache"
+         maxElementsInMemory="1000"
+         eternal="false"
+         timeToIdleSeconds="5"
+         timeToLiveSeconds="5"
+         overflowToDisk="false"
+         memoryStoreEvictionPolicy="LRU"/>
+</ehcache>
+```
+
+#### 指定二级缓存类型
+
+mapper映射文件中
+
+```xml
+<cache type="org.mybatis.caches.ehcache.EhcacheCache" />
+```
+
+### 配置logback日志
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration debug="true">
+    <appender name="STDOUT"
+        class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{HH:mm:ss.SSS}] [%-5level] [%thread] [%logger] [%msg]%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
+    </root>
+    
+    <logger name="cn.lyxlz.mybatis.mapper" level="DEBUG" />
+</configuration>
+```
