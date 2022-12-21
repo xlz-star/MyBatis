@@ -684,3 +684,320 @@ public void testGetEmpAndDeptByStep() {
     System.out.println(emp);
 }
 ```
+
+> 分步查询的优点：
+>
+> 可以实现延迟加载，但是必须在核心配置文件中设置
+>
+> lazyLoadingEnabled:  延迟加载开关，当开启时，所有关联对象都会延迟加载
+>
+> aggressiveLazyLoading: 当开启时，任意方法的调用都会加载该对象的所有属性。否则，每个属性按需加载
+>
+> 此时就可以实现按需加载，获取的数据是什么，就会执行相应的SQL。此时可通过association和collection中的fetchType属性设置当前分布查询是否使用延迟加载，fetchType="lazy(延迟加载)|eager(立即加载)"
+
+### 2、一对多
+
+在`“多”`中设置对应实体类对象的`集合`
+
+```java
+public class Dept {
+    private Integer did;
+    private String deptName;
+    private List<Emp> emp;
+}
+```
+
+#### 使用collection标签
+
+```xml
+<resultMap id="DeptAndEmpResultMap" type="Dept">
+    <id property="did" column="did"/>
+    <result property="deptName" column="dept_name" />
+    <!--
+		collection:
+			property: 对应的属性
+			ofType: 集合内对应的实体类
+	-->
+    <collection property="emps" ofType="Emp">
+        <id property="eid" column="eid" />
+        <result property="empName" column="emp_name" />
+        <result property="age" column="age" />
+        <result property="sex" column="sex" />
+        <result property="email" column="email" />
+    </collection>
+</resultMap>
+
+<select id="getDeptAndEmp" resultMap="DeptAndEmpResultMap">
+    select * from t_dept d left join t_emp e on e.did = d.did
+</select>
+```
+
+#### 分步骤查询
+
+由于前面已经写过获取所有Emp的代码，这里直接调用`EmpMapper.getAllEmp`方法
+
+```xml
+<resultMap id="DeptAndEmpByStepResultMap" type="Dept">
+    <id property="did" column="did"/>
+    <result property="deptName" column="dept_name" />
+    <association property="emps"
+                 select="cn.lyxlz.mybatis.mapper.EmpMapper.getAllEmp"
+                 column="did"
+    />
+</resultMap>
+
+<select id="getDeptAndEmpByStep" resultMap="DeptAndEmpByStepResultMap">
+    select * from t_dept
+</select>
+```
+
+## 八、动态SQL
+
+> MyBatis框架的动态SQL技术是一种根据特定条件动态拼装SQL语句的功能，它存在的意义是为了解决拼接SQL语句字符串时的痛点问题。
+
+### 1、if
+
+在编写SQL时，当某些条件缺失或不满足规则时，我们不需要执行where后的语句，这时我们可以使用`if`标签让MyBatis帮我们自动判断是否要拼接SQL条件。
+
+如当某些字段为null和空时，不拼接条件。这里的`1=1`是为了避免所有的if标签都不满足，单独出现where造成SQL语法错误。
+
+```xml
+<select id="getEmpByCondition" resultType="cn.lyxlz.mybatis.pojo.Emp">
+        select * from t_emp where 1=1
+        <if test="empName != null and empName != ''">
+            emp_name = #{empName}
+        </if>
+        <if test="age != null and age != ''">
+            and age = #{age}
+        </if>
+        <if test="sex != null and sex != ''">
+            and sex = #{sex}
+        </if>
+        <if test="email != null and email != ''">
+            and email = #{email}
+        </if>
+</select>
+```
+
+### 2、where
+
+为了解决上面提到的where关键字问题，MyBatis提供了`where`标签来动态的拼接where关键字
+
+> 注意：where标签中的`and`和`or`关键字，只能写在条件语句前，写在后面无法对多余的and和or进行删除
+
+```xml
+<select id="getEmpByCondition" resultType="cn.lyxlz.mybatis.pojo.Emp">
+    select * from t_emp
+    <where>
+        <if test="empName != null and empName != ''">
+            emp_name = #{empName}
+        </if>
+        <if test="age != null and age != ''">
+            and age = #{age}
+        </if>
+        <if test="sex != null and sex != ''">
+            and sex = #{sex}
+        </if>
+        <if test="email != null and email != ''">
+            and email = #{email}
+        </if>
+    </where>
+</select>
+```
+
+### 3、trim
+
+为了解决where标签只能处理and和or在语句前的情况，MyBatis提供了`trim`标签来处理前后指定字符
+
+>trim:
+>
+>​	prefix | suffix: 将trim标签中内容前面或后面`添加`指定内容
+>
+>​	suffixOverrides | prefixOverrides: 将trim标签中内容前面或后面`删除`指定内容
+>
+>​	若trim中的条件一个都不满足，则trim不会做任何处理
+
+```xml
+<select id="getEmpByCondition" resultType="cn.lyxlz.mybatis.pojo.Emp">
+    select * from t_emp
+    <!--语句前添加where，语句后的and和or去掉-->
+    <trim prefix="where" suffixOverrides="and|or">
+        <if test="empName != null and empName != ''">
+            emp_name = #{empName}
+        </if>
+        <if test="age != null and age != ''">
+            age = #{age} and 
+        </if>
+        <if test="sex != null and sex != ''">
+            sex = #{sex} and 
+        </if>
+        <if test="email != null and email != ''">
+            email = #{email}
+        </if>
+    </trim>
+</select>
+```
+
+### 4、choose、when、otherwise
+
+效果同if标签，但是效果同java中的`if-else if-else`，当某个判断分支成立时，`不再`继续判断
+
+```xml
+<select id="getEmpByChoose" resultType="cn.lyxlz.mybatis.pojo.Emp">
+    select * from t_emp
+    <where>
+        <choose>
+            <when test="empName != null and empName != ''">
+                emp_name = #{empName}
+            </when>
+            <when test="age != null and age != ''">
+                age = #{age}
+            </when>
+            <when test="sex != null and sex != ''">
+                sex = #{sex}
+            </when>
+            <when test="email != null and email != ''">
+                email = #{email}
+            </when>
+            <otherwise>
+                did = 1
+            </otherwise>
+        </choose>
+    </where>
+</select>
+```
+
+### 5、foreach
+
+用于在处理传入参数为`数组`时的数据摆放问题
+
+例如：批量删除
+
+**法一**：
+
+```java
+int deleteMoreByArray(@Param("eids") Integer[] eids);
+```
+
+```xml
+<delete id="deleteMoreByArray">
+    delete from t_emp where eid in
+    <!--
+       foreach:
+        collection: 要循环的数组
+        item: 每次循环出来的元素
+        separator: 分隔符
+		open: 循环内容以什么开始(所有内容)
+		close: 循环内容以什么结束(所有内容)
+      -->
+    <foreach collection="eids" item="eid" separator="," open="(" close=")">
+        #{eid}
+    </foreach>
+</delete>
+```
+
+**法二**：
+
+```xml
+<delete id="deleteMoreByArray">
+    delete from t_emp where
+    <foreach collection="eids" item="eid" separator="or">
+        eid = #{eid}
+    </foreach>
+</delete>
+```
+
+例如：批量添加
+
+```java
+int insertMoreByArray(@Param("emps") List<Emp> emps);
+```
+
+```xml
+<insert id="insertMoreByArray">
+    insert into t_emp values
+    <foreach collection="emps" item="emp" separator=",">
+        (null, #{emp.empName}, #{emp.age}, #{emp.sex}, #{emp.email}, null)
+    </foreach>
+</insert>
+```
+
+### 6、sql
+
+用于定义一些常用sql代码段，如大段的列名
+
+```xml
+<sql id="empCol">eid, emp_name, age, sex, email</sql>
+```
+
+调用时使用`include`标签即可
+
+```xml
+select <include refid="empCol" /> from t_emp
+```
+
+## 九、MyBatis缓存
+
+### 1、一级缓存
+
+一级缓存是SqlSession级别的，通过同一个SqlSeesion查询的数据会被缓存，下次查询相同的数据，就会从缓存中直接获取，不会从数据库重新访问
+
+使一级缓存失效的四种情况：
+
+1. 同的SqlSession对应不同的一级缓存
+2. 同一个SqlSession但是查询条件不一样
+3. 同一个SqlSession两次查询期间执行了任何一次增删改操作
+4. 同一个SqlSession两次查询期间手动清空了缓存(sqlSession.clearCache())
+
+### 2、二级缓存
+
+二级缓存是SqlSessionFactory级别，通过同一个SqlSessionFactory创建的SqlSession查询的结果会被缓存；此后再次执行相同的查询语句，结果就会从缓存中获取
+
+二级缓存开启的条件：
+
+1. 在核心配置文件中，设置全局配置属性cacheEnabled="true"，默认为true
+2. 在映射文件中设置标签<cache />
+3. 二级缓存必须在SqlSession关闭或提交之后有效
+4. 查询的数据所转换的实体类类型必须实现序列化接口
+
+二级缓存失效的情况
+
+两次查询之间执行任意增删改，都会使一二级缓存失效。
+
+### 3、二级缓存相关配置
+
+在mapper配置文件中添加cache标签可以设置一些属性：
+
+- eviction属性：缓存回收策略
+
+​		LRU（Least Recently Used）- 最近最少使用的：移除最长时间不被使用的对象
+
+​		FIFO（First in First out）- 先入先出：按对象进入缓存的顺序移除
+
+​		SOFT - 软引用：移除基于垃圾回收器状态和软引用规则的对象
+
+​		WEAK - 弱引用：更积极的移除基于垃圾回收器状态和弱引用规则的对象
+
+- flushInterval属性：刷新间隔，单位为秒
+
+​		默认不设置，缓存仅仅是在调用语句时刷新
+
+- size属性：引用数目：正整数
+
+​		代表缓存最多可以存储多少个对象，太大容易OOM
+
+- readOnly属性：只读，true/false
+
+​		true：只读缓存：会给调用者返回缓存对象的相同实例。因此这些对象不可修改。拥有很高的性能
+
+​		false：读写缓存：会返回缓存对象的拷贝（序列化）。性能会受影响，但安全，默认为false
+
+### 4、MyBatis缓存查询的顺序
+
+先查二级缓存，因为二级缓存中可能有其他SqlSession已经查出来的数据，可以拿来直接使用
+
+如果二级缓存没有，再查询一级缓存
+
+如果一级缓存没有，则查询数据库
+
+SqlSession关闭后，一级缓存中的数据会写入二级缓存

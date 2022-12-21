@@ -4,7 +4,36 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.lyxlz.mybatis.mapper.DeptMapper">
 
+    <resultMap id="DeptAndEmpResultMap" type="Dept">
+        <id property="did" column="did"/>
+        <result property="deptName" column="dept_name" />
+        <collection property="emps" ofType="Emp">
+            <id property="eid" column="eid" />
+            <result property="empName" column="emp_name" />
+            <result property="age" column="age" />
+            <result property="sex" column="sex" />
+            <result property="email" column="email" />
+        </collection>
+    </resultMap>
+
+    <resultMap id="DeptAndEmpByStepResultMap" type="Dept">
+        <id property="did" column="did"/>
+        <result property="deptName" column="dept_name" />
+        <association property="emps"
+                     select="cn.lyxlz.mybatis.mapper.EmpMapper.getAllEmp"
+                     column="did"
+        />
+    </resultMap>
+
     <select id="getEmpAndDeptByStepTwo" resultType="cn.lyxlz.mybatis.pojo.Dept">
         select * from t_dept where did = #{did}
+    </select>
+
+    <select id="getDeptAndEmp" resultMap="DeptAndEmpResultMap">
+        select * from t_dept d left join t_emp e on e.did = d.did
+    </select>
+
+    <select id="getDeptAndEmpByStep" resultMap="DeptAndEmpByStepResultMap">
+        select * from t_dept
     </select>
 </mapper>

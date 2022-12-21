@@ -61,10 +61,11 @@
         select * from t_emp
     </select>
 
-    <select id="getAllEmpOld" resultType="cn.lyxlz.mybatis.pojo.Emp">
-        <!--select eid, emp_name as empName, age, sex, email, did from t_emp;-->
-        select * from t_emp
-    </select>
+
+<!--    <select id="getAllEmpOld" resultType="cn.lyxlz.mybatis.pojo.Emp">-->
+<!--        &lt;!&ndash;select eid, emp_name as empName, age, sex, email, did from t_emp;&ndash;&gt;-->
+<!--        select * from t_emp-->
+<!--    </select> -->
 
     <select id="getEmpAndDept" resultMap="empAndDeptResultMapTwo">
         SELECT

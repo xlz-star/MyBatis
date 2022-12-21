@@ -8,7 +8,9 @@
     <!--设置MyBatis的全局配置-->
     <settings>
         <!--设置下划线转驼峰-->
-        <setting name="mapUnderscoreToCamelCase" value="true"/>
+<!--        <setting name="mapUnderscoreToCamelCase" value="true"/>-->
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="aggressiveLazyLoading" value="false"/>
     </settings>
     
     <typeAliases>

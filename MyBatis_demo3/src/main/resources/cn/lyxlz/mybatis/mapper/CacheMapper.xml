@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.lyxlz.mybatis.mapper.CacheMapper">
+    <cache type="org.mybatis.caches.ehcache.EhcacheCache" />
+    <select id="getEmpByEid" resultType="cn.lyxlz.mybatis.pojo.Emp">
+        select * from t_emp where eid = #{eid}
+    </select>
+</mapper>

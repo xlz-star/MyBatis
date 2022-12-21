@@ -1,0 +1,7 @@
+cn\lyxlz\mybatis\mapper\DeptMapper.class
+cn\lyxlz\mybatis\mapper\CacheMapper.class
+cn\lyxlz\mybatis\mapper\EmpMapper.class
+cn\lyxlz\mybatis\mapper\DynamicSQLMapper.class
+cn\lyxlz\mybatis\utils\SqlSessionUtils.class
+cn\lyxlz\mybatis\pojo\Emp.class
+cn\lyxlz\mybatis\pojo\Dept.class

@@ -13,7 +13,7 @@ public class Dept {
 
     private Integer did;
     private String deptName;
-    private List<Emp> emp;
+    private List<Emp> emps;
     public Dept(String deptName) {
         this.deptName = deptName;
     }
